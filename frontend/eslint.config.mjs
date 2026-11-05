@@ -11,7 +11,7 @@ export default defineConfig([
     expoConfig,
     {
         // design/ holds design prototypes and mockups, not app code: excluded from lint and the pre-commit hook
-        ignores: ["dist/*", ".expo/*", "android/*", "ios/*", "web-build/*", "design/**"],
+        ignores: ["dist/*", ".expo/*", "android/*", "ios/*", "web-build/*", "design/**", "src/types/api.gen.ts"],
     },
     {
         plugins: {

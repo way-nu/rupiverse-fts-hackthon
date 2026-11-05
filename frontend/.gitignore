@@ -190,3 +190,9 @@ expo-env.d.ts
 
 # Backup of the Decisions API experiment (Claude Cowork); not part of the app
 /temp/
+
+# Playwright output
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

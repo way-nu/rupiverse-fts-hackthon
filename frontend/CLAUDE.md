@@ -58,7 +58,7 @@ src/
 │       └── fixtures.ts       # typed fixture objects + named scenarios per endpoint
 └── types/                    # shared types; api.gen.ts is generated, never edit it
 design/
-└── rv<n>/                    # exported designs per ticket (PNG per screen and platform). Read-only.
+└── *.jsx, Rupiverse.html     # JSX export of the Claude Design project. Read-only, not imported; replaced whole.
 e2e/                          # Playwright specs, rv<n>-*.spec.ts
 ```
 
@@ -71,12 +71,12 @@ the same convention recursively.
 
 ## Designs
 
-- The ticket's designs are in `design/rv<n>/` as PNG exports from Claude Design, one per screen and platform
-(`<screen>-desktop.png`, `<screen>-mobile.png`). Open them before building a screen and match them exactly.
+- The designs are the JSX export of the Claude Design project in `frontend/design/` (screens in `rupiverse-*.jsx`,
+tokens in `rupiverse-theme.jsx`, artboards in `Rupiverse.html`). Open them before building a screen and port them.
 - The Spec Doc (linked from the ClickUp ticket) says which states each screen has. Build every state, not just the
 happy path.
 - Never invent UI. If a state or element is missing from the design, ask @pm in the room instead of guessing.
-- Theme: Calm (light) only for now. Font: Geist, loaded with `expo-font`.
+- Themes: Calm (light) and Midnight (dark), following the device setting. Font: Geist, loaded with `expo-font`.
 
 ## Reuse before building
 
