@@ -36,14 +36,14 @@ export default function LoginScreen() {
                     <PasswordField testID="login-password" toggleTestID="login-password-toggle" label={TEXT.password}
                         value={login.password} onChangeText={login.setPassword} autoComplete="current-password"
                         onSubmitEditing={login.submit}
-                        forgot={<TextLink testID="login-forgot" style={styles.forgot}
+                        forgot={<TextLink testID="login-forgot" type="linkSmall"
                             onPress={login.goForgot}>{TEXT.forgot}</TextLink>} />
                     <PrimaryButton testID="login-submit" label={TEXT.submit} onPress={login.submit}
                         disabled={!login.canSubmit} busy={login.busy} />
                 </View>
                 <View style={styles.divider}>
                     <View style={[styles.rule, {backgroundColor: theme.border}]} />
-                    <ThemedText type="small" style={styles.or}>{TEXT.or}</ThemedText>
+                    <ThemedText type="overline">{TEXT.or}</ThemedText>
                     <View style={[styles.rule, {backgroundColor: theme.border}]} />
                 </View>
                 <View style={styles.soon}>

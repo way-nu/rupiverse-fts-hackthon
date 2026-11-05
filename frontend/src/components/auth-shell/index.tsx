@@ -1,10 +1,11 @@
 // The auth frame from frontend/design/rupiverse-auth.jsx: DesktopAuth (split, web >= 1024 px) and AuthScreen (mobile).
 import {type ReactNode} from "react";
-import {Pressable, ScrollView, Text, View} from "react-native";
+import {Pressable, ScrollView, View} from "react-native";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import Svg, {Path} from "react-native-svg";
 
 import {Logo, RupeeOrbit} from "@/components/logo";
+import {ThemedText} from "@/components/themed-text";
 import {useLayout} from "@/hooks/use-layout";
 import {useTheme} from "@/hooks/use-theme";
 
@@ -40,13 +41,13 @@ export function AuthShell({children, onBack}: Props) {
                     </View>
                     <View style={styles.brandLogo}>
                         <RupeeOrbit size={36} fg={theme.accent} bg={theme.accentInk} radius={10} />
-                        <Text style={[styles.brandWord, {color: theme.accentInk}]}>Rupiverse</Text>
+                        <ThemedText type="brandWord">Rupiverse</ThemedText>
                     </View>
                     <View>
-                        <Text style={[styles.tagline, {color: theme.accentInk}]}>{TAGLINE}</Text>
-                        <Text style={[styles.subline, {color: theme.accentInk}]}>{SUBLINE}</Text>
+                        <ThemedText type="tagline" style={styles.tagline}>{TAGLINE}</ThemedText>
+                        <ThemedText type="subline" style={styles.subline}>{SUBLINE}</ThemedText>
                     </View>
-                    <Text style={[styles.place, {color: theme.accentInk}]}>{PLACE}</Text>
+                    <ThemedText type="place" style={styles.place}>{PLACE}</ThemedText>
                 </View>
                 <View style={styles.formColumn}>
                     <View style={styles.formInner}>
@@ -54,7 +55,7 @@ export function AuthShell({children, onBack}: Props) {
                             <Pressable testID="auth-back" accessibilityRole="button" onPress={onBack}
                                 style={styles.backLink}>
                                 <Chevron color={theme.ink2} size={16} />
-                                <Text style={[styles.backLinkText, {color: theme.ink2}]}>Back</Text>
+                                <ThemedText type="backLink">Back</ThemedText>
                             </Pressable>
                         )}
                         {children}

@@ -23,6 +23,19 @@ const DEFAULT_TONE: Record<ThemedTextType, NonNullable<ThemedTextProps["tone"]>>
     error: "negative",
     button: "accentInk",
     strong: "ink",
+    smallStrong: "ink2",
+    overline: "ink3",
+    linkSmall: "accent",
+    digit: "ink",
+    brandWord: "accentInk",
+    tagline: "accentInk",
+    subline: "accentInk",
+    place: "accentInk",
+    backLink: "ink2",
+    logoWord: "ink",
+    glyph: "accentInk",
+    soon: "ink3",
+    badge: "ink3",
 };
 
 export function ThemedText({type = "body", tone, style, ...rest}: ThemedTextProps) {

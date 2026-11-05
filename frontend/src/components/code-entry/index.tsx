@@ -26,7 +26,7 @@ export function CodeEntry({testIDPrefix, submitLabel, entry}: Props) {
                 {"Didn't get it? "}
                 {entry.countdown.running ? (
                     <ThemedText testID={`${testIDPrefix}-countdown`} type="small">
-                        Resend in <ThemedText type="small" tone="ink2" style={styles.count}>
+                        Resend in <ThemedText type="smallStrong">
                             {formatCountdown(entry.countdown.remaining)}
                         </ThemedText>
                     </ThemedText>

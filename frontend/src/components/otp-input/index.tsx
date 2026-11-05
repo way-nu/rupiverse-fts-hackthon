@@ -29,7 +29,7 @@ export function OtpInput({testIDPrefix, value, onChange, disabled = false}: Prop
                             backgroundColor: disabled ? theme.sunken : theme.surface,
                             borderColor: isActive ? theme.accent : ch ? theme.borderStrong : theme.border,
                         }]}>
-                            {ch ? <ThemedText style={styles.digit}>{ch}</ThemedText>
+                            {ch ? <ThemedText type="digit">{ch}</ThemedText>
                                 : isActive && <View style={[styles.caret, {backgroundColor: theme.accent}]} />}
                         </View>
                     );
