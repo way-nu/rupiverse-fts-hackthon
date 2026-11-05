@@ -46,20 +46,20 @@ class AuthRepository:
 
     # ── email codes ──────────────────────────────────────────────────────────
 
-    async def get_code(self, user_id: uuid.UUID, purpose: CodePurpose) -> EmailCode | None:
-        result = await self._session.execute(
-            select(EmailCode).where(
-                EmailCode.user_id == user_id, EmailCode.purpose == purpose, EmailCode.deleted_at.is_(None)
-            )
+    async def get_code(self, user_id: uuid.UUID, purpose: CodePurpose, *, lock: bool = False) -> EmailCode | None:
+        """`lock=True` takes a row lock (SELECT ... FOR UPDATE) until the transaction ends, so parallel attempts on
+        the same code run one after another and none of them sees a stale attempt count."""
+        query = select(EmailCode).where(
+            EmailCode.user_id == user_id, EmailCode.purpose == purpose, EmailCode.deleted_at.is_(None)
         )
+        result = await self._session.execute(query.with_for_update() if lock else query)
         return result.scalar_one_or_none()
 
     # ── refresh tokens ───────────────────────────────────────────────────────
 
-    async def get_refresh_token(self, token_hash: str) -> RefreshToken | None:
-        result = await self._session.execute(
-            select(RefreshToken).where(RefreshToken.token_hash == token_hash, RefreshToken.deleted_at.is_(None))
-        )
+    async def get_refresh_token(self, token_hash: str, *, lock: bool = False) -> RefreshToken | None:
+        query = select(RefreshToken).where(RefreshToken.token_hash == token_hash, RefreshToken.deleted_at.is_(None))
+        result = await self._session.execute(query.with_for_update() if lock else query)
         return result.scalar_one_or_none()
 
     async def revoke_all_refresh_tokens(self, user_id: uuid.UUID, now: datetime, actor_id: uuid.UUID | None) -> None:
@@ -71,10 +71,9 @@ class AuthRepository:
 
     # ── password reset tokens ────────────────────────────────────────────────
 
-    async def get_reset_token(self, token_hash: str) -> PasswordResetToken | None:
-        result = await self._session.execute(
-            select(PasswordResetToken).where(
-                PasswordResetToken.token_hash == token_hash, PasswordResetToken.deleted_at.is_(None)
-            )
+    async def get_reset_token(self, token_hash: str, *, lock: bool = False) -> PasswordResetToken | None:
+        query = select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == token_hash, PasswordResetToken.deleted_at.is_(None)
         )
+        result = await self._session.execute(query.with_for_update() if lock else query)
         return result.scalar_one_or_none()

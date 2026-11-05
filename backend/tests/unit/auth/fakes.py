@@ -62,10 +62,10 @@ class FakeRepo:
     async def get_user_by_id(self, user_id: uuid.UUID) -> User | None:
         return next((u for u in self._live(User) if u.id == user_id), None)
 
-    async def get_code(self, user_id: uuid.UUID, purpose: str) -> EmailCode | None:
+    async def get_code(self, user_id: uuid.UUID, purpose: str, *, lock: bool = False) -> EmailCode | None:
         return next((c for c in self._live(EmailCode) if c.user_id == user_id and c.purpose == purpose), None)
 
-    async def get_refresh_token(self, token_hash: str) -> RefreshToken | None:
+    async def get_refresh_token(self, token_hash: str, *, lock: bool = False) -> RefreshToken | None:
         return next((t for t in self._live(RefreshToken) if t.token_hash == token_hash), None)
 
     async def revoke_all_refresh_tokens(self, user_id: uuid.UUID, now: datetime, actor_id: uuid.UUID | None) -> None:
@@ -73,5 +73,5 @@ class FakeRepo:
             if token.user_id == user_id and token.revoked_at is None:
                 token.revoked_at = now
 
-    async def get_reset_token(self, token_hash: str) -> PasswordResetToken | None:
+    async def get_reset_token(self, token_hash: str, *, lock: bool = False) -> PasswordResetToken | None:
         return next((t for t in self._live(PasswordResetToken) if t.token_hash == token_hash), None)

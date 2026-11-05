@@ -146,7 +146,8 @@ class AuthService:
 
     async def refresh(self, refresh_token: str) -> IssuedSession:
         now = self._clock.now()
-        row = await self._repo.get_refresh_token(security.hash_token(refresh_token))
+        # Locked so parallel uses of one token are serialised: only the first one finds it unrevoked (AC11).
+        row = await self._repo.get_refresh_token(security.hash_token(refresh_token), lock=True)
         if row is None or row.revoked_at is not None or row.expires_at <= now:
             raise errors.invalid_refresh_token()
         user = await self._repo.get_user_by_id(row.user_id)
@@ -161,7 +162,7 @@ class AuthService:
 
     async def logout(self, refresh_token: str) -> None:
         """Idempotent: unknown or already-revoked tokens are fine."""
-        row = await self._repo.get_refresh_token(security.hash_token(refresh_token))
+        row = await self._repo.get_refresh_token(security.hash_token(refresh_token), lock=True)
         if row is not None and row.revoked_at is None:
             row.revoked_at = self._clock.now()
             await self._repo.save(row, NO_ACTOR)
@@ -200,7 +201,8 @@ class AuthService:
     async def reset_password(self, reset_token: str, new_password: str) -> None:
         check_password(new_password)  # a policy failure leaves the token usable
         now = self._clock.now()
-        row = await self._repo.get_reset_token(security.hash_token(reset_token))
+        # Locked so a reset token works exactly once even under parallel requests (AC16).
+        row = await self._repo.get_reset_token(security.hash_token(reset_token), lock=True)
         if row is None or row.used_at is not None or row.expires_at <= now:
             raise errors.invalid_reset_token()
         user = await self._repo.get_user_by_id(row.user_id)
@@ -225,7 +227,8 @@ class AuthService:
 
     async def _consume_code(self, user: User | None, purpose: CodePurpose, code: str) -> None:
         """Shared code rules: 3 wrong attempts lock the code, 10 min expiry, single use. Raises on failure."""
-        row = await self._repo.get_code(user.id, purpose) if user is not None else None
+        # Locked so parallel guesses are counted one after another: the 3rd wrong one always locks (AC6).
+        row = await self._repo.get_code(user.id, purpose, lock=True) if user is not None else None
         if row is None or row.consumed_at is not None:
             raise errors.code_invalid(MAX_CODE_ATTEMPTS - 1)
         if row.failed_attempts >= MAX_CODE_ATTEMPTS:
