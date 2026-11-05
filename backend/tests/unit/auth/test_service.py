@@ -120,8 +120,13 @@ async def test_forgot_unknown_email_sends_nothing(env: Any) -> None:
     assert mailer.sent == []
 
 
-async def test_rv1_writes_leave_by_columns_null(env: Any) -> None:
+async def test_by_columns_name_the_identified_user(env: Any) -> None:
     service, repo, mailer, _ = env
     await service.signup(EMAIL, PASSWORD)
-    await service.verify_email(EMAIL, mailer.sent[-1].code)
-    assert all(r.created_by is None and r.updated_by is None for r in repo.rows)
+    user = await repo.get_user_by_email(EMAIL)
+    assert user.created_by is None and user.updated_by is None  # brand-new signup: nobody is acting yet
+    session = await service.verify_email(EMAIL, mailer.sent[-1].code)
+    assert user.updated_by == user.id
+    await service.refresh(session.refresh_token)
+    others = [r for r in repo.rows if r is not user]
+    assert others and all(r.created_by == user.id and r.updated_by == user.id for r in others)

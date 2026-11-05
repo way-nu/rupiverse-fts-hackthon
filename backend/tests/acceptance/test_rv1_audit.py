@@ -1,4 +1,5 @@
-"""RV1 acceptance · AuditMixin behaviour: AC25 (*_by NULL after every RV1 write, updated_at moves, soft-deleted users
+"""RV1 acceptance · AuditMixin behaviour: AC25 (*_by = the acting user, NULL only on a new signup's users row;
+updated_at moves; unknown emails write nothing; soft-deleted users
 ignored by lookups). Schema-level AC25 checks live in test_rv1_schema.py."""
 
 import asyncpg
@@ -37,10 +38,9 @@ async def by_values(db: asyncpg.Connection, user_id: object) -> dict[str, list[t
     }
 
 
-async def test_ac25_every_rv1_write_leaves_by_columns_null(client: httpx.AsyncClient, db: asyncpg.Connection) -> None:
-    """AC25: after signup, re-signup, wrong codes, resend, verify, login, refresh, logout, forgot, verify-code,
-    reset: created_by / updated_by / deleted_by (and deleted_at) are NULL on every row of all four tables."""
-    email = new_email("audit-all")
+async def full_flow(client: httpx.AsyncClient, db: asyncpg.Connection, email: str) -> None:
+    """Every RV1 write for one user: signup, re-signup, wrong code, resend, verify, login, refresh,
+    logout, forgot, wrong reset code, verify-code, reset."""
     code = await signup(client, email)
     assert (await client.post("/auth/signup", json={"email": email, "password": OTHER_PASSWORD})).status_code == 201
     await client.post("/auth/verify", json={"email": email, "code": other_code(code)})
@@ -48,7 +48,7 @@ async def test_ac25_every_rv1_write_leaves_by_columns_null(client: httpx.AsyncCl
     assert (await client.post("/auth/resend", json={"email": email})).status_code == 202
     code = (await outbox(client, email))["code"]
     pair = (await client.post("/auth/verify", json={"email": email, "code": code})).json()
-    second = (await login(client, email, OTHER_PASSWORD)).json()
+    assert (await login(client, email, OTHER_PASSWORD)).status_code == 200
     rotated = (await client.post("/auth/refresh", json={"refresh_token": pair["refresh_token"]})).json()
     assert (await client.post("/auth/logout", json={"refresh_token": rotated["refresh_token"]})).status_code == 204
     assert (await client.post("/auth/password/forgot", json={"email": email})).status_code == 202
@@ -57,13 +57,69 @@ async def test_ac25_every_rv1_write_leaves_by_columns_null(client: httpx.AsyncCl
     token = (await client.post("/auth/password/verify-code", json={"email": email, "code": reset_code})).json()
     reset = {"reset_token": token["reset_token"], "new_password": STRONG_PASSWORD}
     assert (await client.post("/auth/password/reset", json=reset)).status_code == 204
-    assert second["refresh_token"]
 
-    user = await user_row(db, email)
-    values = await by_values(db, user["id"])
+
+async def test_ac25_every_rv1_write_records_the_acting_user(client: httpx.AsyncClient, db: asyncpg.Connection) -> None:
+    """AC25 (ruling 2026-11-06): after every RV1 write, users.created_by stays NULL (new signup) and users.updated_by
+    = the user's id; every email_codes / refresh_tokens / password_reset_tokens row has created_by = updated_by =
+    its user_id; deleted_at / deleted_by stay NULL everywhere."""
+    email = new_email("audit-all")
+    await full_flow(client, db, email)
+    uid = (await user_row(db, email))["id"]
+    values = await by_values(db, uid)
     assert all(values.values()), f"every table should have rows for this user after the flow: {values}"
-    not_null = {table: rows for table, rows in values.items() if any(v is not None for row in rows for v in row)}
-    assert not_null == {}, f"*_by / deleted_at must be NULL after RV1 writes (all unauthenticated): {not_null}"
+
+    expected_users = [(None, uid, None, None)]
+    assert values["users"] == expected_users, f"users (created_by, updated_by, deleted_by, deleted_at): {values}"
+    for table in ("email_codes", "refresh_tokens", "password_reset_tokens"):
+        wrong = [row for row in values[table] if row != (uid, uid, None, None)]
+        assert wrong == [], f"{table} rows must be (user_id, user_id, NULL, NULL): {wrong}"
+
+
+async def test_ac25_each_step_sets_the_acting_user(client: httpx.AsyncClient, db: asyncpg.Connection) -> None:
+    """AC25 step by step: signup leaves users.updated_by NULL; a wrong code, verify, refresh rotation (new and
+    revoked rows), logout and reset each record the user's id on the row they write."""
+    email = new_email("audit-step")
+    code = await signup(client, email)
+    user = await user_row(db, email)
+    uid = user["id"]
+    assert (user["created_by"], user["updated_by"]) == (None, None), "a brand-new signup's users row has no actor"
+
+    await client.post("/auth/verify", json={"email": email, "code": other_code(code)})
+    row = await db.fetchrow("SELECT created_by, updated_by FROM email_codes WHERE user_id = $1", uid)
+    assert (row["created_by"], row["updated_by"]) == (uid, uid), "wrong-attempt update"
+
+    pair = (await client.post("/auth/verify", json={"email": email, "code": code})).json()
+    assert (await user_row(db, email))["updated_by"] == uid, "verify"
+
+    rotated = (await client.post("/auth/refresh", json={"refresh_token": pair["refresh_token"]})).json()
+    rows = await db.fetch("SELECT created_by, updated_by, revoked_at FROM refresh_tokens WHERE user_id = $1", uid)
+    assert len(rows) == 2 and all((r["created_by"], r["updated_by"]) == (uid, uid) for r in rows), rows
+
+    assert (await client.post("/auth/logout", json={"refresh_token": rotated["refresh_token"]})).status_code == 204
+    rows = await db.fetch("SELECT updated_by FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NOT NULL", uid)
+    assert len(rows) == 2 and all(r["updated_by"] == uid for r in rows), "rotate + logout revoke"
+
+
+async def test_ac25_unknown_email_writes_nothing(client: httpx.AsyncClient, db: asyncpg.Connection) -> None:
+    """AC25 / §7: requests for an unknown email (resend, verify, login, forgot, verify-code) write no rows."""
+
+    async def counts() -> tuple[int, ...]:
+        return tuple(
+            [
+                await db.fetchval(f"SELECT count(*) FROM {t}")
+                for t in ("users", "email_codes", "refresh_tokens", "password_reset_tokens")
+            ]
+        )
+
+    before = await counts()
+    ghost = new_email("ghost-audit")
+    await client.post("/auth/resend", json={"email": ghost})
+    await client.post("/auth/verify", json={"email": ghost, "code": "123456"})
+    await client.post("/auth/login", json={"email": ghost, "password": STRONG_PASSWORD})
+    await client.post("/auth/password/forgot", json={"email": ghost})
+    await client.post("/auth/password/verify-code", json={"email": ghost, "code": "123456"})
+    assert await counts() == before
 
 
 async def test_ac25_updated_at_moves_on_update(client: httpx.AsyncClient, db: asyncpg.Connection) -> None:

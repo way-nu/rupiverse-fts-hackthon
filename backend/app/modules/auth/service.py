@@ -26,8 +26,8 @@ from app.modules.auth.policy import check_password, normalize_email, try_normali
 from app.modules.auth.ports import Clock, CodeEmail, EmailSender, EmailSendError
 from app.modules.auth.repository import AuthRepository
 
-# Every write in RV1 is unauthenticated, so no user is "acting": *_by stays NULL (Spec §7).
-NO_ACTOR: uuid.UUID | None = None
+# *_by (Spec §7, AC25, backend/CLAUDE.md): the acting user is the one the request identifies (by code, password,
+# refresh or reset token). It is NULL only on the users row a brand-new signup creates.
 
 
 @dataclass(frozen=True)
@@ -86,10 +86,10 @@ class AuthService:
             raise errors.email_taken()
         if user is None:
             user = User(email=email, password_hash=password_hash, is_verified=False)
-            await self._repo.add(user, NO_ACTOR)
+            await self._repo.add(user, None)
         else:
             user.password_hash = password_hash
-            await self._repo.save(user, NO_ACTOR)
+            await self._repo.save(user, user.id)
         await self._repo.commit()  # the account survives an SMTP failure; the user can resend
 
         await self._send_code_unless_recent(user, VERIFY_EMAIL)
@@ -105,7 +105,7 @@ class AuthService:
         now = self._clock.now()
         user.is_verified = True
         user.verified_at = now
-        await self._repo.save(user, NO_ACTOR)
+        await self._repo.save(user, user.id)
         session = await self._issue_session(user, now)
         await self._repo.commit()
         return session
@@ -155,7 +155,7 @@ class AuthService:
             raise errors.invalid_refresh_token()
 
         row.revoked_at = now
-        await self._repo.save(row, NO_ACTOR)
+        await self._repo.save(row, row.user_id)
         session = await self._issue_session(user, now)
         await self._repo.commit()
         return session
@@ -165,7 +165,7 @@ class AuthService:
         row = await self._repo.get_refresh_token(security.hash_token(refresh_token), lock=True)
         if row is not None and row.revoked_at is None:
             row.revoked_at = self._clock.now()
-            await self._repo.save(row, NO_ACTOR)
+            await self._repo.save(row, row.user_id)
             await self._repo.commit()
 
     async def current_user(self, user_id: uuid.UUID) -> User:
@@ -194,7 +194,7 @@ class AuthService:
             token_hash=security.hash_token(token),
             expires_at=self._clock.now() + RESET_TOKEN_TTL,
         )
-        await self._repo.add(reset, NO_ACTOR)
+        await self._repo.add(reset, user.id)
         await self._repo.commit()
         return IssuedResetToken(reset_token=token, expires_in=int(RESET_TOKEN_TTL.total_seconds()))
 
@@ -213,10 +213,10 @@ class AuthService:
         if not user.is_verified:
             user.is_verified = True
             user.verified_at = now
-        await self._repo.save(user, NO_ACTOR)
+        await self._repo.save(user, user.id)
         row.used_at = now
-        await self._repo.save(row, NO_ACTOR)
-        await self._repo.revoke_all_refresh_tokens(user.id, now, NO_ACTOR)
+        await self._repo.save(row, row.user_id)
+        await self._repo.revoke_all_refresh_tokens(user.id, now, user.id)
         await self._repo.commit()
 
     # ── helpers ──────────────────────────────────────────────────────────────
@@ -238,13 +238,13 @@ class AuthService:
             raise errors.code_expired()
         if not security.code_matches(code.strip(), row.code_hash, self._config.code_hash_secret):
             row.failed_attempts += 1
-            await self._repo.save(row, NO_ACTOR)
+            await self._repo.save(row, row.user_id)
             await self._repo.commit()
             if row.failed_attempts >= MAX_CODE_ATTEMPTS:
                 raise errors.code_locked()
             raise errors.code_invalid(MAX_CODE_ATTEMPTS - row.failed_attempts)
         row.consumed_at = now
-        await self._repo.save(row, NO_ACTOR)
+        await self._repo.save(row, row.user_id)
 
     async def _seconds_until_resend(self, user_id: uuid.UUID, purpose: CodePurpose) -> int:
         row = await self._repo.get_code(user_id, purpose)
@@ -267,14 +267,14 @@ class AuthService:
             row = EmailCode(
                 user_id=user.id, purpose=purpose, code_hash=code_hash, expires_at=now + CODE_TTL, sent_at=now
             )
-            await self._repo.add(row, NO_ACTOR)
+            await self._repo.add(row, user.id)
         else:
             row.code_hash = code_hash
             row.expires_at = now + CODE_TTL
             row.sent_at = now
             row.failed_attempts = 0
             row.consumed_at = None
-            await self._repo.save(row, NO_ACTOR)
+            await self._repo.save(row, user.id)
 
         message = CodeEmail(
             to=user.email,
@@ -298,7 +298,7 @@ class AuthService:
                 token_hash=security.hash_token(token),
                 expires_at=now + self._config.refresh_token_ttl,
             ),
-            NO_ACTOR,
+            user.id,
         )
         access = security.create_access_token(user.id, now, self._config.access_token_ttl, self._config.jwt_secret)
         return IssuedSession(

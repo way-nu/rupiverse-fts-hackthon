@@ -63,10 +63,10 @@ async def test_ac5_code_just_under_10_minutes_still_works(client: httpx.AsyncCli
     assert (await verify(client, email, code)).status_code == 200
 
 
-async def test_ac25_verify_moves_updated_at_and_leaves_by_null(
+async def test_ac25_verify_sets_updated_by_and_moves_updated_at(
     client: httpx.AsyncClient, db: asyncpg.Connection
 ) -> None:
-    """AC25: verify moves users.updated_at forward; *_by stays NULL (unauthenticated write)."""
+    """AC25: verify moves users.updated_at forward and sets users.updated_by = the user's id (code row too)."""
     email = new_email("audit")
     code = await signup(client, email)
     before = await user_row(db, email)
@@ -75,10 +75,10 @@ async def test_ac25_verify_moves_updated_at_and_leaves_by_null(
 
     assert (await verify(client, email, code)).status_code == 200
     after = await user_row(db, email)
-    assert after["updated_by"] is None
+    assert after["updated_by"] == after["id"]
     assert after["updated_at"] > stamped
     assert after["created_by"] is None
-    assert (await code_row(db, email))["updated_by"] is None
+    assert (await code_row(db, email))["updated_by"] == after["id"]
 
 
 # ── AC6 (verify) ─────────────────────────────────────────────────────────────
