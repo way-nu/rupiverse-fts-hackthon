@@ -3,5 +3,5 @@
 import os
 
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://rupiverse@localhost:5432/rupiverse_unit_tests_unused")
-os.environ.setdefault("JWT_SECRET", "unit-test-jwt-secret")
-os.environ.setdefault("CODE_HASH_SECRET", "unit-test-code-secret")
+os.environ.setdefault("JWT_SECRET", "unit-test-jwt-secret-0123456789abcdef")
+os.environ.setdefault("CODE_HASH_SECRET", "unit-test-code-secret-0123456789abcdef")

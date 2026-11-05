@@ -12,8 +12,30 @@ from app.main import UnsafeConfigError, check_settings
 
 
 def _settings(**values: object) -> Settings:
-    base: dict[str, object] = {"database_url": "postgresql+asyncpg://x@y/z", "jwt_secret": "j", "code_hash_secret": "c"}
+    base: dict[str, object] = {
+        "database_url": "postgresql+asyncpg://x@y/z",
+        "jwt_secret": "j" * 32,
+        "code_hash_secret": "c" * 32,
+    }
     return Settings(**{**base, **values})  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("key", ["jwt_secret", "code_hash_secret"])
+def test_empty_or_short_secrets_refuse_to_start(key: str) -> None:
+    with pytest.raises(ValueError):
+        _settings(**{key: ""})
+    with pytest.raises(ValueError):
+        _settings(**{key: "short"})
+
+
+def test_config_error_names_the_key_without_its_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core.config import ConfigError, load_settings
+
+    monkeypatch.setenv("JWT_SECRET", "")
+    monkeypatch.setenv("CODE_HASH_SECRET", "a-perfectly-long-code-hash-secret-value")
+    with pytest.raises(ConfigError) as info:
+        load_settings()
+    assert "JWT_SECRET" in str(info.value) and "a-perfectly-long" not in str(info.value)
 
 
 def test_outbox_in_production_refuses_to_start() -> None:
@@ -41,6 +63,14 @@ def test_redaction_masks_secrets(secret: str) -> None:
 def test_redaction_keeps_ordinary_paths() -> None:
     line = '127.0.0.1:54321 - "POST /auth/password/verify-code HTTP/1.1" 400'
     assert redact(line) == line
+
+
+def test_redaction_keeps_access_log_args_shape() -> None:
+    args = ("127.0.0.1:5000", "GET", "/test/outbox/latest?email=a@example.com", "1.1", 200)
+    record = logging.LogRecord("uvicorn.access", logging.INFO, __file__, 1, '%s - "%s %s HTTP/%s" %d', args, None)
+    RedactionFilter().filter(record)
+    assert isinstance(record.args, tuple) and len(record.args) == 5 and record.args[4] == 200
+    assert record.getMessage() == '127.0.0.1:5000 - "GET /test/outbox/latest?email=[email] HTTP/1.1" 200'
 
 
 def test_redaction_filter_rewrites_args() -> None:

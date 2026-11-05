@@ -9,7 +9,7 @@ _PATTERNS = (
     # JWTs
     (re.compile(r"\beyJ[\w-]+\.[\w-]+\.[\w-]+"), "[jwt]"),
     # emails
-    (re.compile(r"[^\s@\"'<>(),;:]+@[^\s@\"'<>(),;:]+\.[A-Za-z]{2,}"), "[email]"),
+    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"), "[email]"),
     # opaque tokens and hex digests: 20+ url-safe chars including at least one digit
     (re.compile(r"(?<![\w-])(?=[A-Za-z_-]*\d)[A-Za-z0-9_-]{20,}"), "[secret]"),
     # one-time codes
@@ -23,13 +23,21 @@ def redact(text: str) -> str:
     return text
 
 
+def _redact_value(value: object) -> object:
+    return redact(value) if isinstance(value, str) else value
+
+
 class RedactionFilter(logging.Filter):
-    """Rewrites each record's final message with secrets masked."""
+    """Masks secrets in the message template and in each string argument, keeping `record.args` in its original
+    shape (uvicorn's access formatter unpacks it as (client, method, path, version, status))."""
 
     def filter(self, record: logging.LogRecord) -> bool:
-        message = record.getMessage()
-        record.msg = redact(message)
-        record.args = None
+        if isinstance(record.msg, str):
+            record.msg = redact(record.msg)
+        if isinstance(record.args, tuple):
+            record.args = tuple(_redact_value(arg) for arg in record.args)
+        elif isinstance(record.args, dict):
+            record.args = {key: _redact_value(value) for key, value in record.args.items()}
         if record.exc_info and record.exc_text is None:
             record.exc_text = redact(logging.Formatter().formatException(record.exc_info))
         elif record.exc_text:

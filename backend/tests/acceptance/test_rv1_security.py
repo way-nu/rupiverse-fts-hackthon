@@ -161,3 +161,14 @@ async def test_ac26_login_errors_use_the_error_shape(client: httpx.AsyncClient) 
     await signup(client, email, STRONG_PASSWORD)
     assert_error(await login(client, email), 403, "email_not_verified", email=email)
     assert_error(await login(client, email, "Wrong@Pass1"), 401, "invalid_credentials")
+
+
+async def test_ac14_access_log_lines_survive_redaction(server: Server, client: httpx.AsyncClient) -> None:
+    """AC14 regression (bug found at 1382ecb): the redaction filter must not break log formatting. Every request
+    should leave its normal uvicorn access line, and no '--- Logging error ---' traceback may appear."""
+    await client.post("/auth/login", json={"email": new_email("logline"), "password": "Wrong@Pass1"})
+    await client.get("/me")
+    log = server.log_text()
+    assert "--- Logging error ---" not in log, "the logging setup raises while formatting records (see server log)"
+    assert '"POST /auth/login HTTP/1.1" 401' in log, "uvicorn access lines are missing from the log"
+    assert '"GET /me HTTP/1.1" 401' in log, "uvicorn access lines are missing from the log"
