@@ -69,3 +69,33 @@ def test_ac30_env_example_explains_env_staging() -> None:
     example = (BACKEND_DIR / ".env.example").read_text()
     comments = [line for line in example.splitlines() if line.lstrip().startswith("#")]
     assert any(".env.staging" in line for line in comments), "no comment in .env.example mentions .env.staging"
+
+
+WHITESPACE_OR_SHORT = [
+    pytest.param(" " * 36, id="36-spaces"),
+    pytest.param("\t" * 40, id="40-tabs"),
+    pytest.param(" \n\t " * 10, id="mixed-whitespace"),
+    pytest.param(" " * 10 + "Padded-Short-Secret-9" + " " * 10, id="short-after-strip"),
+    pytest.param("a" * 31, id="31-chars"),
+]
+
+
+@pytest.mark.parametrize("key", ["JWT_SECRET", "CODE_HASH_SECRET"])
+@pytest.mark.parametrize("value", WHITESPACE_OR_SHORT)
+def test_ac30_whitespace_only_or_short_secret_is_refused(database_url: str, key: str, value: str) -> None:
+    """AC30 + PM ruling 2026-11-05: whitespace is stripped before the empty and 32-character checks, so a key of
+    spaces (or one that is short once stripped) is refused like an empty one; the error names the key, not the value."""
+    env = server_env(database_url, APP_ENV="test", TEST_OUTBOX_ENABLED="false", **{key: value})
+    served, code, output = _start(env)
+    assert not served, f"the app served requests with {key}={value!r}"
+    assert code not in (None, 0), f"expected a non-zero exit for {key}={value!r}, got {code}:\n{output}"
+    assert key in output, f"AC30: the startup error must name {key}:\n{output[-2000:]}"
+    if value.strip():
+        assert value.strip() not in output, f"AC30: the startup output prints the {key} value"
+
+
+def test_ac30_exactly_32_characters_is_accepted(database_url: str) -> None:
+    """AC30 boundary: a 32-character secret (after stripping) starts the app."""
+    env = server_env(database_url, APP_ENV="test", TEST_OUTBOX_ENABLED="false", JWT_SECRET="  " + "k" * 32 + "  ")
+    served, _, output = _start(env)
+    assert served, f"the app did not start with a 32-character JWT_SECRET:\n{output[-2000:]}"

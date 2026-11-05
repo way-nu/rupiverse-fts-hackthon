@@ -26,6 +26,10 @@ def test_empty_or_short_secrets_refuse_to_start(key: str) -> None:
         _settings(**{key: ""})
     with pytest.raises(ValueError):
         _settings(**{key: "short"})
+    with pytest.raises(ValueError):
+        _settings(**{key: " " * 36})
+    with pytest.raises(ValueError):
+        _settings(**{key: "\t\n " * 12})
 
 
 def test_config_error_names_the_key_without_its_value(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,11 +2,15 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import Field, ValidationError
+from pydantic import StringConstraints, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
+
+
+SecretKey = Annotated[str, StringConstraints(strip_whitespace=True, min_length=32)]
 
 
 class DatabaseSettings(BaseSettings):
@@ -18,9 +22,10 @@ class DatabaseSettings(BaseSettings):
 
 
 class Settings(DatabaseSettings):
-    # Signing / HMAC keys: refuse to start without a real value (an empty key would sign anything).
-    jwt_secret: str = Field(min_length=32)
-    code_hash_secret: str = Field(min_length=32)
+    # Signing / HMAC keys: refuse to start without a real value. Whitespace is stripped first, so a key of spaces
+    # counts as empty (AC30).
+    jwt_secret: SecretKey
+    code_hash_secret: SecretKey
     access_token_ttl_min: int = 15
     refresh_token_ttl_days: int = 30
 
