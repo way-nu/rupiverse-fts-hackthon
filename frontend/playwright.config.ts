@@ -1,6 +1,8 @@
 // Playwright for RV1+ (Tester-owned). Two projects, per frontend/CLAUDE.md:
 //   mock: Expo web with EXPO_PUBLIC_API_MODE=mock, no backend. Every screen state and error code.
 //   live: Expo web against the real backend (test outbox on). End-to-end acceptance flows only.
+// testMatch is matched against the full path, so the patterns anchor on the file name: a checkout folder like
+// "rv1-master" must not pull live specs into the mock project.
 // Only one Expo web server runs on WEB_PORT at a time, so the webServer list follows the project being run:
 //   npx playwright test --project=mock
 //   npx playwright test --project=live
@@ -33,12 +35,12 @@ export default defineConfig({
     projects: [
         {
             name: "mock",
-            testMatch: /rv\d+-(?!live-).*\.spec\.ts$/,
+            testMatch: /(?:^|[\\/])rv\d+-(?!live-)[^\\/]*\.spec\.ts$/,
             use: {...devices["Desktop Chrome"], viewport: {width: 1280, height: 820}},
         },
         {
             name: "live",
-            testMatch: /rv\d+-live-.*\.spec\.ts$/,
+            testMatch: /(?:^|[\\/])rv\d+-live-[^\\/]*\.spec\.ts$/,
             use: {...devices["Desktop Chrome"], viewport: {width: 1280, height: 820}},
         },
     ],

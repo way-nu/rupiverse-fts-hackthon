@@ -19,7 +19,17 @@ const git = (...args: string[]): string => execFileSync("git", args, {cwd: REPO,
 const mergeBase = (): string => git("merge-base", BASE, "HEAD").trim();
 
 test.describe("RV1 frontend/CLAUDE.md (AC29)", () => {
+    // AC29's diff and commit checks inspect the RV1 frontend PR's own change to frontend/CLAUDE.md. Once that change is
+    // on the base branch (the old "Calm (light) only for now" line is gone there), there is no RV1 PR diff left to
+    // inspect: on master and on every later branch they are skipped, with a reason that says so. The content check
+    // below still guards the file everywhere.
+    const SKIP_REASON = "AC29 diff/commit checks apply only to the RV1 frontend PR; its CLAUDE.md change is already on "
+        + `${BASE}, so there is nothing to diff (skipped, not passed). The content check still runs.`;
+    const rv1DocsChangeOnBase = (): boolean =>
+        !git("show", `${BASE}:${FILE}`).includes("Calm (light) only for now");
+
     test("AC29: the diff touches only lines 61, 74–75 and 79 of master's frontend/CLAUDE.md", async () => {
+        test.skip(rv1DocsChangeOnBase(), SKIP_REASON);
         const diff = git("diff", "--unified=0", mergeBase(), "HEAD", "--", FILE);
         expect(diff, "frontend/CLAUDE.md is not changed on this branch").not.toBe("");
         const touched: number[] = [];
@@ -49,6 +59,7 @@ test.describe("RV1 frontend/CLAUDE.md (AC29)", () => {
     });
 
     test("AC29: the change is its own docs(rv1) commit touching only frontend/CLAUDE.md", async () => {
+        test.skip(rv1DocsChangeOnBase(), SKIP_REASON);
         const commits = git("log", "--format=%H", `${mergeBase()}..HEAD`, "--", FILE).split("\n").filter(Boolean);
         expect(commits.length, "no commit on this branch touches frontend/CLAUDE.md").toBeGreaterThan(0);
         for (const sha of commits) {
