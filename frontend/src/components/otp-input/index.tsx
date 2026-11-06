@@ -1,5 +1,5 @@
 // Six code cells (frontend/design/rupiverse-auth.jsx: OTPInput) driven by one numeric input that accepts a paste.
-import {TextInput, View} from "react-native";
+import {Pressable, TextInput, View} from "react-native";
 
 import {ThemedText} from "@/components/themed-text";
 import {useTheme} from "@/hooks/use-theme";
@@ -16,11 +16,11 @@ type Props = {
 
 export function OtpInput({testIDPrefix, value, onChange, disabled = false}: Props) {
     const theme = useTheme();
-    const {focused, onFocus, onBlur} = useOtpFocus();
+    const {focused, inputRef, focusInput, onFocus, onBlur} = useOtpFocus();
     const active = Math.min(value.length, CODE_LENGTH - 1);
     return (
         <View style={styles.wrap}>
-            <View style={styles.row}>
+            <Pressable style={styles.row} onPress={focusInput} disabled={disabled} accessible={false}>
                 {Array.from({length: CODE_LENGTH}, (_, i) => {
                     const ch = value[i];
                     const isActive = focused && !disabled && i === active;
@@ -34,8 +34,8 @@ export function OtpInput({testIDPrefix, value, onChange, disabled = false}: Prop
                         </View>
                     );
                 })}
-            </View>
-            <TextInput testID={`${testIDPrefix}-code-input`} value={value}
+            </Pressable>
+            <TextInput ref={inputRef} testID={`${testIDPrefix}-code-input`} value={value}
                 onChangeText={(text) => onChange(digitsOnly(text))} inputMode="numeric" keyboardType="number-pad"
                 autoComplete="one-time-code" textContentType="oneTimeCode" maxLength={CODE_LENGTH}
                 editable={!disabled} aria-disabled={disabled} accessibilityLabel="6-digit code"
