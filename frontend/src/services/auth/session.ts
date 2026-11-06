@@ -35,6 +35,8 @@ export type AuthClient = {
     resetPassword(body: ResetPasswordRequest): Promise<void>;
     sessionStatus(): Promise<SessionStatus>;
     subscribe(listener: Listener): () => void;
+    // For other services' authed calls (e.g. api.profile): the same refresh-once-then-sign-out handling as me().
+    authed<T>(call: (accessToken: string) => Promise<T>): Promise<T>;
 };
 
 export function createAuthClient(transport: AuthApi): AuthClient {
@@ -114,5 +116,6 @@ export function createAuthClient(transport: AuthApi): AuthClient {
                 listeners.delete(listener);
             };
         },
+        authed,
     };
 }

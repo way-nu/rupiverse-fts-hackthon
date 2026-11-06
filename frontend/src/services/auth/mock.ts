@@ -49,6 +49,12 @@ function findUser(email: string): MockUser | undefined {
     return state.get().users.find((u) => u.email === wanted);
 }
 
+// The signed-in mock user for an access token (other mock modules, e.g. profile, resolve their caller with this).
+export function mockUserForToken(accessToken: string): MockUser | undefined {
+    const session = state.get().sessions.find((s) => s.access === accessToken && !s.revoked);
+    return session && state.get().users.find((u) => u.id === session.userId);
+}
+
 function toUser(user: MockUser): User {
     return {id: user.id, email: user.email, is_verified: user.verified, created_at: user.created_at};
 }
@@ -226,8 +232,7 @@ export const authMock: AuthApi = {
 
     async me(accessToken) {
         await gate("me");
-        const session = state.get().sessions.find((s) => s.access === accessToken && !s.revoked);
-        const user = session && state.get().users.find((u) => u.id === session.userId);
+        const user = mockUserForToken(accessToken);
         if (!user) {
             throw fail("invalid_token");
         }

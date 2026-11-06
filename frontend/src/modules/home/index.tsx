@@ -1,5 +1,6 @@
-// Home placeholder (no design; RV2 Dashboard replaces it): the /me email and Logout.
+// Home placeholder (no design; RV2 Dashboard replaces it): the /me email, Logout and the profile button (RV4).
 import {ActivityIndicator, View} from "react-native";
+import {useSafeAreaInsets} from "react-native-safe-area-context";
 
 import {FormMessage} from "@/components/form-message";
 import {Logo} from "@/components/logo";
@@ -9,6 +10,7 @@ import {ThemedText} from "@/components/themed-text";
 import {ThemedView} from "@/components/themed-view";
 import {useTheme} from "@/hooks/use-theme";
 
+import {ProfileButton} from "./components/profile-button";
 import {TEXT} from "./constants";
 import {useHome} from "./hooks";
 import {styles} from "./styles";
@@ -16,8 +18,13 @@ import {styles} from "./styles";
 export default function HomeScreen() {
     const theme = useTheme();
     const home = useHome();
+    const insets = useSafeAreaInsets();
     return (
         <ThemedView testID="home-screen" style={styles.screen}>
+            <View style={[styles.topBar, {top: insets.top + 16, right: insets.right + 16}]}>
+                <ProfileButton testID="home-profile" initial={home.initial} label={TEXT.profile}
+                    onPress={home.openProfile} />
+            </View>
             <View style={styles.card}>
                 <Logo size={30} style={styles.logo} />
                 {home.state.kind === "loading" && (

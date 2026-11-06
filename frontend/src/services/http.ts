@@ -4,7 +4,7 @@ import {ApiError, type ApiErrorExtras, NETWORK_ERROR} from "./api-error";
 const BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
 type RequestOptions = {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "PUT";
     body?: unknown;
     accessToken?: string;
 };

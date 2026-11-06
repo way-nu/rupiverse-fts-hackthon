@@ -16,7 +16,6 @@ export const styles = StyleSheet.create({
     mobile: {flex: 1},
     mobileContent: {flexGrow: 1},
     topRow: {flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 8, paddingHorizontal: 16, minHeight: 40},
-    backRound: {width: 36, height: 36, borderRadius: 999, alignItems: "center", justifyContent: "center"},
     spacer: {width: 36, height: 36},
     logoRow: {paddingTop: 14, paddingHorizontal: 24, paddingBottom: 6, alignItems: "center"},
     mobileForm: {flex: 1, paddingTop: 18, paddingHorizontal: 24, paddingBottom: 20},

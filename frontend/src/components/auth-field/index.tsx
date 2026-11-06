@@ -1,4 +1,5 @@
-// Label + input with error (red) and valid (green check) states (frontend/design/rupiverse-auth.jsx: AuthField).
+// Label + input with optional prefix (e.g. +91), error (red) and valid (green check) states
+// (frontend/design/rupiverse-auth.jsx: AuthField).
 import {type ReactNode} from "react";
 import {TextInput, type TextInputProps, View} from "react-native";
 import Svg, {Circle, Path} from "react-native-svg";
@@ -14,12 +15,13 @@ export type AuthFieldProps = TextInputProps & {
     error?: string | null;
     errorTestID?: string;
     valid?: boolean;
+    prefix?: string;
     rightSlot?: ReactNode;
     below?: ReactNode;
 };
 
 export function AuthField(props: AuthFieldProps) {
-    const {label, labelRight, error, errorTestID, valid, rightSlot, below, style, ...input} = props;
+    const {label, labelRight, error, errorTestID, valid, prefix, rightSlot, below, style, ...input} = props;
     const theme = useTheme();
     const borderColor = error ? theme.negative : valid ? theme.positive : theme.borderStrong;
     return (
@@ -29,7 +31,13 @@ export function AuthField(props: AuthFieldProps) {
                 {labelRight}
             </View>
             <View style={[styles.box, {backgroundColor: theme.surface, borderColor}]}>
-                <TextInput placeholderTextColor={theme.ink3} style={[styles.input, {color: theme.ink}, style]}
+                {prefix ? (
+                    <View style={[styles.prefix, {borderRightColor: theme.border}]}>
+                        <ThemedText type="field" tone="ink2">{prefix}</ThemedText>
+                    </View>
+                ) : null}
+                <TextInput placeholderTextColor={theme.ink3}
+                    style={[styles.input, prefix ? styles.inputAfterPrefix : null, {color: theme.ink}, style]}
                     {...input} />
                 {rightSlot}
                 {!rightSlot && valid && !error && (

@@ -5,4 +5,5 @@ export const styles = StyleSheet.create({
     card: {width: "100%", maxWidth: 380, gap: 20, alignItems: "stretch"},
     logo: {alignSelf: "center", marginBottom: 8},
     center: {textAlign: "center"},
+    topBar: {position: "absolute"},
 });

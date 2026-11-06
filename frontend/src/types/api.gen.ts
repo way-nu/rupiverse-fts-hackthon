@@ -208,6 +208,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile */
+        get: operations["get_profile_profile_get"];
+        /** Update Profile */
+        put: operations["update_profile_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -241,6 +259,35 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** ProfileOut */
+        ProfileOut: {
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string | null;
+            /** Age */
+            age: number | null;
+            /** Gender */
+            gender: ("male" | "female" | "other") | null;
+            /** Phone */
+            phone: string | null;
+            /** Updated At */
+            updated_at: string | null;
+        };
+        /**
+         * ProfileUpdate
+         * @description Full replace: exactly these four keys, all required; unknown keys and loose types are rejected.
+         */
+        ProfileUpdate: {
+            /** Full Name */
+            full_name: string | null;
+            /** Age */
+            age: number | "" | null;
+            /** Gender */
+            gender: string | null;
+            /** Phone */
+            phone: string | null;
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -831,6 +878,77 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_profile_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_profile_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

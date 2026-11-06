@@ -4,4 +4,5 @@ export const TEXT = {
     error: "We couldn't load your account. Try again, or log out.",
     retry: "Try again",
     logout: "Log out",
+    profile: "Profile",
 };

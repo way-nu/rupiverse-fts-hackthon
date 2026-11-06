@@ -9,6 +9,9 @@ export const styles = StyleSheet.create({
         overflow: "hidden"},
     input: {flex: 1, height: "100%", paddingLeft: 14, paddingRight: 12, fontFamily: Fonts.regular, fontSize: 14.5,
         outlineStyle: "none" as never},
+    prefix: {height: "100%", justifyContent: "center", paddingLeft: 12, paddingRight: 8, marginRight: 10,
+        borderRightWidth: 1},
+    inputAfterPrefix: {paddingLeft: 0},
     icon: {marginRight: 12},
     error: {marginTop: 5, marginLeft: 2},
 });

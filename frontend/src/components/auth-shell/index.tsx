@@ -2,8 +2,8 @@
 import {type ReactNode} from "react";
 import {KeyboardAvoidingView, Pressable, ScrollView, View} from "react-native";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
-import Svg, {Path} from "react-native-svg";
 
+import {BackButton, Chevron} from "@/components/back-button";
 import {Logo, RupeeOrbit} from "@/components/logo";
 import {ThemedText} from "@/components/themed-text";
 import {useLayout} from "@/hooks/use-layout";
@@ -17,15 +17,6 @@ type Props = {
     // Flow steps (Verify, Forgot, Reset code, New password) get a back control.
     onBack?: () => void;
 };
-
-function Chevron({color, size}: { color: string; size: number }) {
-    return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}
-            strokeLinecap="round" strokeLinejoin="round">
-            <Path d="M14 6l-6 6 6 6" />
-        </Svg>
-    );
-}
 
 export function AuthShell({children, onBack}: Props) {
     const theme = useTheme();
@@ -73,14 +64,7 @@ export function AuthShell({children, onBack}: Props) {
                 contentContainerStyle={[styles.mobileContent, {paddingTop: insets.top, paddingBottom: insets.bottom}]}
                 keyboardShouldPersistTaps="handled" keyboardDismissMode={KEYBOARD_DISMISS_MODE}>
                 <View style={styles.topRow}>
-                    {onBack ? (
-                        <Pressable testID="auth-back" accessibilityRole="button" accessibilityLabel="Back"
-                            onPress={onBack}
-                            style={[styles.backRound, {backgroundColor: theme.surface, borderWidth: 1,
-                                borderColor: theme.border}]}>
-                            <Chevron color={theme.ink} size={18} />
-                        </Pressable>
-                    ) : <View style={styles.spacer} />}
+                    {onBack ? <BackButton testID="auth-back" onPress={onBack} /> : <View style={styles.spacer} />}
                 </View>
                 <View style={styles.logoRow}>
                     <Logo testID="auth-logo" size={30} />
