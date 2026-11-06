@@ -220,11 +220,10 @@ def test_ac25_spec_columns_and_constraints(migrated_db: str) -> None:
         WHERE c.contype = 'f' AND a.attname = 'user_id'
         """,
     )
-    assert {r["table_name"]: r["on_delete"] for r in cascades} == {
-        "email_codes": "c",
-        "password_reset_tokens": "c",
-        "refresh_tokens": "c",
-    }
+    # Every owned table cascades by design (OwnedMixin), so later tickets add to this set (PM ruling, RV4 2026-11-06).
+    on_delete = {r["table_name"]: r["on_delete"] for r in cascades}
+    assert {"email_codes", "password_reset_tokens", "refresh_tokens"} <= on_delete.keys(), on_delete
+    assert set(on_delete.values()) == {"c"}, f"every user_id FK must be ON DELETE CASCADE: {on_delete}"
 
 
 async def test_ac25_db_constraints_reject_bad_rows(migrated_db: str) -> None:

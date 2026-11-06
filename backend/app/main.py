@@ -8,6 +8,7 @@ from app.core.errors import install_error_handlers
 from app.core.logging import setup_logging
 from app.modules.auth.router import me_router
 from app.modules.auth.router import router as auth_router
+from app.modules.profile.router import router as profile_router
 
 
 class UnsafeConfigError(RuntimeError):
@@ -29,7 +30,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
     )
     install_error_handlers(app)
@@ -44,6 +45,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(me_router)
+    app.include_router(profile_router)
     if settings.test_outbox_enabled:
         from app.modules.outbox.router import router as outbox_router
 
